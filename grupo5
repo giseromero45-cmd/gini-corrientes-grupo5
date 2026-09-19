@@ -1,0 +1,101 @@
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(
+    page_title="Monitor de Desigualdad EPH - Corrientes (Grupo 5)",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+GINI = {"T4 2024": 0.3305706743, "T4 2025": 0.3358053924}
+GINI_INDEC_NACIONAL = {"T4 2024": 0.430, "T4 2025": 0.427}
+GINI_INDEC_PROVINCIA = {"2023 (3T)": 0.421, "2025 (3T)": 0.351}
+
+BRECHAS = pd.DataFrame({
+    "Indicador": ["D10 / D1", "D9 / D1", "D10 / D5",
+                  "% ingreso decil más rico (D10)", "% ingreso decil más pobre (D1)"],
+    "T4 2024": [8.77540452, 5.139358103, 3.480798614, 0.2622575889, 0.02901498719],
+    "T4 2025": [9.827590697, 6.467766456, 3.067654019, 0.2470374663, 0.02460040491],
+})
+BRECHAS["Variación"] = BRECHAS["T4 2025"] - BRECHAS["T4 2024"]
+
+LORENZ = pd.DataFrame({
+    "decil": list(range(0, 11)),
+    "% Población acumulada": [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],
+    "% Ingreso acum. T4 2024": [0.0,0.02901498719,0.07271335342,0.1357570764,0.1978900087,
+                                 0.2754231173,0.3619981557,0.4642829348,0.5856374607,0.7377424111,1.0],
+    "% Ingreso acum. T4 2025": [0.0,0.02460040491,0.06394060882,0.1195952303,0.1880586028,
+                                 0.2611812458,0.3517293788,0.4644909,0.5950180703,0.7529625337,1.0],
+    "Línea de igualdad": [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],
+})
+
+INGRESO_PROMEDIO_DECIL = pd.DataFrame({
+    "Decil": list(range(1, 11)),
+    "T4 2024": [99450.64725,156387.4931,197580.3451,221641.5073,250723.9735,
+                297041.4021,347677.725,398599.8899,511112.4898,872719.6593],
+    "T4 2025": [109085.1794,184462.7012,243511.7845,291700.1178,349467.2111,
+                397317.7275,479657.6165,565244.5875,705537.4644,1072044.495],
+})
+
+st.title("📊 Monitor de Distribución del Ingreso y Desigualdad (EPH)")
+st.caption("Proyecto Final - Grupo 5: Andrea Celeste Coronel & Gisela Alejandra Romero | "
+           "Tecnicatura en Ciencia de Datos e IA — Aglomerado Corrientes (código 12, EPH-INDEC)")
+
+seccion = st.sidebar.radio("Ir a:", ["Resumen general", "Curva de Lorenz",
+                                      "Ingreso por decil", "Comparación con INDEC", "Metodología"])
+
+if seccion == "Resumen general":
+    st.header("Coeficiente de Gini — Aglomerado Corrientes")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Gini T4 2024", f"{GINI['T4 2024']:.4f}")
+    col2.metric("Gini T4 2025", f"{GINI['T4 2025']:.4f}", delta=f"{GINI['T4 2025']-GINI['T4 2024']:+.4f}")
+    col3.metric("Variación relativa", f"{(GINI['T4 2025']/GINI['T4 2024']-1)*100:+.2f}%")
+    st.subheader("Brechas entre deciles")
+    st.dataframe(BRECHAS.style.format({"T4 2024":"{:.3f}","T4 2025":"{:.3f}","Variación":"{:+.3f}"}),
+                 use_container_width=True, hide_index=True)
+    st.info("El coeficiente de Gini subió levemente entre T4 2024 y T4 2025 en el aglomerado "
+            "Corrientes, lo que indica un leve aumento de la desigualdad de ingresos.")
+
+elif seccion == "Curva de Lorenz":
+    st.header("Curva de Lorenz — Aglomerado Corrientes")
+    st.line_chart(LORENZ.set_index("% Población acumulada")[
+        ["% Ingreso acum. T4 2024", "% Ingreso acum. T4 2025", "Línea de igualdad"]])
+    st.caption("Cuanto más se aleja la curva de la línea de igualdad, mayor es la desigualdad.")
+    st.dataframe(LORENZ, use_container_width=True, hide_index=True)
+
+elif seccion == "Ingreso por decil":
+    st.header("Ingreso promedio (IPCF) por decil")
+    st.bar_chart(INGRESO_PROMEDIO_DECIL.set_index("Decil"))
+    st.dataframe(INGRESO_PROMEDIO_DECIL.style.format({"T4 2024":"$ {:,.0f}","T4 2025":"$ {:,.0f}"}),
+                 use_container_width=True, hide_index=True)
+
+elif seccion == "Comparación con INDEC":
+    st.header("Comparación con datos oficiales del INDEC")
+    st.subheader("1) Gini nacional (31 aglomerados urbanos, serie trimestral)")
+    st.dataframe(pd.DataFrame({
+        "Período": list(GINI.keys()),
+        "Grupo 5 (aglomerado Corrientes)": list(GINI.values()),
+        "INDEC (Total Nacional Urbano)": list(GINI_INDEC_NACIONAL.values()),
+    }), use_container_width=True, hide_index=True)
+    st.caption("Fuente INDEC: 'Evolución de la distribución del ingreso (EPH)', T4 2024 y 2025.")
+
+    st.subheader("2) Gini de la provincia de Corrientes (EPH Total Urbano, anual, 3er trim.)")
+    st.dataframe(pd.DataFrame({
+        "Período INDEC": list(GINI_INDEC_PROVINCIA.keys()),
+        "Grupo 5 (aglomerado, T4 mismo año)": [GINI["T4 2024"], GINI["T4 2025"]],
+        "INDEC (provincia Corrientes)": list(GINI_INDEC_PROVINCIA.values()),
+    }), use_container_width=True, hide_index=True)
+    st.caption("Fuente INDEC: 'EPH total urbano. Evolución de la distribución del ingreso', 3er trim. (2023 y 2025).")
+
+    st.warning("Los valores no son 100% comparables: distinta cobertura geográfica (aglomerado vs. "
+               "provincia) y distinto trimestre (T4 vs. T3). Aun así, el orden de magnitud (~0,33-0,35) "
+               "es coherente con el dato provincial más reciente del INDEC (0,351 en 2025).")
+
+else:
+    st.header("Metodología")
+    st.markdown("""
+- **IPCF**: Ingreso Per Cápita Familiar.
+- **PONDIH**: ponderador de IPCF ajustado por no respuesta (Anexo I INDEC).
+- **AGLOMERADO = 12**: se filtra solo el aglomerado urbano Corrientes.
+- **Deciles locales**: recalculados ordenando por IPCF dentro de Corrientes.
+- **Gini (método trapezoidal)**: Gini = 1 − Σ (Xᵢ − Xᵢ₋₁) × (Yᵢ + Yᵢ₋₁).""")
