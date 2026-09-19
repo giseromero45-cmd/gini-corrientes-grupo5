@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gini Corrientes - Grupo 5</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.83.0/build/stlite.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import { mount } from "https://cdn.jsdelivr.net/npm/@stlite/browser@0.83.0/build/stlite.js";
+    const rawUrl = "https://raw.githubusercontent.com/giseromero45-cmd/gini-corrientes-grupo5/main/app.py";
+    const response = await fetch(rawUrl);
+    if (!response.ok) throw new Error("No se pudo obtener app.py desde GitHub.");
+    const appCode = await response.text();
+    mount(
+      {
+        entrypoint: "app.py",
+        files: { "app.py": appCode },
+        requirements: ["pandas"]
+      },
+      document.getElementById("root")
+    );
+  </script>
+</body>
+</html>
